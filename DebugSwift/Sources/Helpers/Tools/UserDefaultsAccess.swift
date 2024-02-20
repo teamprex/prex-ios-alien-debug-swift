@@ -19,7 +19,7 @@ extension UserDefaults {
     }
 }
 
-@propertyWrapper struct UserDefaultAccess<T: Codable & Sendable>: Sendable {
+@propertyWrapper public struct UserDefaultAccess<T: Codable & Sendable>: Sendable {
     let key: String
     let defaultValue: T
     let userDefaults: UserDefaultsService

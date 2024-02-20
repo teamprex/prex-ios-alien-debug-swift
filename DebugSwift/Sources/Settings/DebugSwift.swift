@@ -44,7 +44,37 @@ public class DebugSwift {
     @MainActor
     public func toggle() -> Self {
         FloatViewManager.toggle()
-
         return self
+    }
+    
+    public static func theme(appearance: Appearance) {
+        Theme.shared.setAppearance(appearance: appearance)
+    }
+    
+    public static func toggleDebugger(_ enable: Bool) {
+        DebugSwift.Debugger.enable = enable
+    }
+}
+
+extension DebugSwift {
+    public enum Network {
+        public static var ignoredURLs = [String]()
+        public static var onlyURLs = [String]()
+    }
+
+    public enum App {
+        public static var customInfo: (() -> [CustomData])?
+        public static var customAction: (() -> [CustomAction])?
+        public static var customControllers: (() -> [UIViewController])?
+    }
+
+    public enum Console {
+        public static var ignoredLogs = [String]()
+        public static var onlyLogs = [String]()
+    }
+
+    enum Debugger {
+        @UserDefaultAccess(key: .debugger, defaultValue: true)
+        public static var enable: Bool
     }
 }
