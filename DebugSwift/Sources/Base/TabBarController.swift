@@ -30,7 +30,8 @@ class TabBarController: UITabBarController {
             UINavigationController(rootViewController: $0)
         }
 
-        tabBar.tintColor = UIColor.white
+        tabBar.isHidden = false
+        tabBar.tintColor = Theme.shared.fontColor
         tabBar.unselectedItemTintColor = .gray
         tabBar.setBackgroundColor(color: UIColor.black)
         tabBar.addTopBorderWithColor(color: .gray, thickness: 0.3)
