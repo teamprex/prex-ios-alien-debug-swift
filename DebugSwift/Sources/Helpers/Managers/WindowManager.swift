@@ -8,16 +8,17 @@
 import Foundation
 import UIKit
 
+@MainActor
 enum WindowManager {
-    static var isSelectingWindow: Bool = false
+    nonisolated(unsafe) static var isSelectingWindow = false
+
     static var rootNavigation: UINavigationController? {
         window.rootViewController as? UINavigationController
     }
 
     static let window: CustomWindow = {
         let window: CustomWindow
-        if #available(iOS 13.0, *),
-           let scene = UIApplication.shared.keyWindow?.windowScene {
+        if let scene = UIApplication.keyWindow?.windowScene {
             window = CustomWindow(windowScene: scene)
         } else {
             window = CustomWindow(frame: UIScreen.main.bounds)
@@ -25,6 +26,7 @@ enum WindowManager {
         window.windowLevel = .alert + 1
 
         let navigation = UINavigationController(rootViewController: UIViewController())
+        navigation.interactivePopGestureRecognizer?.isEnabled = false
         navigation.setBackgroundColor(color: .clear)
         window.rootViewController = navigation
         window.isHidden = false
@@ -36,7 +38,7 @@ enum WindowManager {
         FloatViewManager.isShowingDebuggerView = true
         if let viewController = FloatViewManager.shared.floatViewController {
             // Prevent clicks
-            UIApplication.shared.beginIgnoringInteractionEvents()
+            window.isUserInteractionEnabled = false
             // Remove keyboard, if opened.
             UIWindow.keyWindow?.endEditing(true)
 
@@ -44,7 +46,7 @@ enum WindowManager {
                 viewController,
                 animated: true
             )
-            UIApplication.shared.endIgnoringInteractionEvents()
+            window.isUserInteractionEnabled = true
         }
     }
 
@@ -72,9 +74,16 @@ enum WindowManager {
             preferredStyle: .actionSheet
         )
 
-        let filteredWindows = UIApplication.shared.windows.filter { window in
+        alertController.popoverPresentationController?.sourceView = WindowManager.rootNavigation?.view
+
+        if let popoverController = alertController.popoverPresentationController {
+            popoverController.sourceView = FloatViewManager.shared.ballView
+            popoverController.sourceRect = FloatViewManager.shared.ballView.bounds
+        }
+
+        let filteredWindows = UIWindowScene._windows.filter { window in
             String(describing: type(of: window)) != "UITextEffectsWindow"
-            && window.windowLevel < UIWindow.Level.alert
+                && window.windowLevel < UIWindow.Level.alert
         }
 
         guard filteredWindows.count > 1 else {
@@ -121,8 +130,7 @@ final class CustomWindow: UIWindow {
         let ballView = FloatViewManager.shared.ballView
         if
             ballView.point(inside: convert(point, to: ballView), with: event) ||
-            FloatViewManager.isShowingDebuggerView
-        {
+            FloatViewManager.isShowingDebuggerView {
             return true
         }
 

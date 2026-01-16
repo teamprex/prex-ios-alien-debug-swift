@@ -7,34 +7,44 @@
 
 import UIKit
 
-public enum DebugSwift {
-    public static func setup() {
-        LocalizationManager.shared.loadBundle()
-        FeatureHandling.shared.selectedFeatureHandler(viewController : nil)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            FloatViewManager.setup(TabBarController())
-        }
-
-        LaunchTimeTracker.measureAppStartUpTime()
-    }
+public class DebugSwift {
     
-    public static func setup(hideFeatures: [DebugSwiftFeatures]) {
-        FeatureHandling.shared.hide(features: hideFeatures)
+    public init() {}
+    
+    @discardableResult
+    @MainActor
+    public func setup(
+        hideFeatures features: [DebugSwiftFeature] = [],
+        disable methods: [DebugSwiftSwizzleFeature] = [],
+        enableBetaFeatures betaFeatures: [DebugSwiftBetaFeature] = []
+    ) -> Self {
+        FeatureHandling.setup(hide: features, disable: methods, enableBeta: betaFeatures)
+        LaunchTimeTracker.shared.measureAppStartUpTime()
+
+        return self
     }
 
-    public static func show() {
+    @discardableResult
+    public func show() -> Self {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             FloatViewManager.show()
         }
+
+        return self
     }
 
-    public static func hide() {
+    @discardableResult
+    @MainActor
+    public func hide() -> Self {
         FloatViewManager.remove()
+        return self
     }
 
-    public static func toggle() {
+    @discardableResult
+    @MainActor
+    public func toggle() -> Self {
         FloatViewManager.toggle()
+<<<<<<< HEAD
     }
     
     public static func theme(appearance: Appearance) {
@@ -66,5 +76,9 @@ extension DebugSwift {
     enum Debugger {
         @UserDefaultAccess(key: .debugger, defaultValue: true)
         public static var enable: Bool
+=======
+
+        return self
+>>>>>>> upstream/main
     }
 }

@@ -8,7 +8,7 @@
 
 import Foundation
 
-final class HttpDatasource {
+final class HttpDatasource: @unchecked Sendable {
     static let shared = HttpDatasource()
 
     var httpModels: [HttpModel] = []
@@ -18,16 +18,15 @@ final class HttpDatasource {
             return false
         }
 
-        if !DebugSwift.Network.onlyURLs.isEmpty {
-            for urlString in DebugSwift.Network.onlyURLs {
-                if model.url?.absoluteString.lowercased().contains(
-                    urlString.lowercased()
-                ) == false {
+        if !DebugSwift.Network.shared.onlyURLs.isEmpty {
+            if let modelUrl = model.url?.absoluteString.lowercased() {
+                let found = DebugSwift.Network.shared.onlyURLs.contains { modelUrl.contains($0.lowercased()) }
+                if !found {
                     return false
                 }
             }
         } else {
-            for urlString in DebugSwift.Network.ignoredURLs {
+            for urlString in DebugSwift.Network.shared.ignoredURLs {
                 if model.url?.absoluteString.lowercased().contains(
                     urlString.lowercased()
                 ) == true {
@@ -37,7 +36,7 @@ final class HttpDatasource {
         }
 
         // Maximum number limit
-        if httpModels.count >= 1000 {
+        if httpModels.count >= 10000 {
             if !httpModels.isEmpty {
                 httpModels.remove(at: 0)
             }
@@ -48,6 +47,24 @@ final class HttpDatasource {
             return false
         }
         model.index = httpModels.count
+        
+        // Check if decryption is enabled and try to decrypt response
+        if DebugSwift.Network.shared.isDecryptionEnabled, let responseData = model.responseData {
+            let encryptionService = DebugSwift.Network.shared.encryptionService
+            model.isEncrypted = encryptionService.isEncrypted(responseData)
+            
+            if model.isEncrypted {
+                // Try custom decryptor first
+                model.decryptedResponseData = encryptionService.customDecrypt(responseData, for: model.url)
+
+                // If custom decryptor didn't work, try with registered keys
+                if model.decryptedResponseData == nil {
+                    let decryptionKey = encryptionService.getDecryptionKey(for: model.url)
+                    model.decryptedResponseData = encryptionService.decrypt(responseData, using: decryptionKey)
+                }
+            }
+        }
+        
         httpModels.append(model)
         return true
     }
@@ -67,21 +84,20 @@ final class HttpDatasource {
 
 extension URLRequest {
     private enum AssociatedKeys {
-        static var requestId = "requestId"
-        static var startTime = "startTime"
+        static let requestId = "requestId"
+        static let startTime = "startTime"
     }
 
     var requestId: String {
         get {
             if let id = objc_getAssociatedObject(self, AssociatedKeys.requestId) as? String {
                 return id
-            } else {
-                let newValue = UUID().uuidString
-                objc_setAssociatedObject(
-                    self, AssociatedKeys.requestId, newValue, .OBJC_ASSOCIATION_COPY_NONATOMIC
-                )
-                return newValue
             }
+            let newValue = UUID().uuidString
+            objc_setAssociatedObject(
+                self, AssociatedKeys.requestId, newValue, .OBJC_ASSOCIATION_COPY_NONATOMIC
+            )
+            return newValue
         }
         set {
             objc_setAssociatedObject(

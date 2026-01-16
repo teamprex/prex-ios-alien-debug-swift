@@ -8,12 +8,12 @@
 import MapKit
 import UIKit
 
+@MainActor
 protocol LocationSelectionDelegate: AnyObject {
     func didSelectLocation(_ location: CLLocation)
 }
 
 final class MapSelectionViewController: BaseController {
-
     private var mapView: MKMapView?
 
     private var selectedLocationAnnotation: MKPointAnnotation?
@@ -61,8 +61,8 @@ final class MapSelectionViewController: BaseController {
     }
 
     private func setupUI() {
-        title = "mapselection-title".localized()
-        view.backgroundColor = Theme.shared.backgroundColor
+        title = "Select Location"
+        view.backgroundColor = UIColor.black
 
         guard let mapView else { return }
         mapView.translatesAutoresizingMaskIntoConstraints = false

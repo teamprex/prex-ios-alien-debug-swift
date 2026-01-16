@@ -8,8 +8,7 @@
 import CoreLocation
 import Foundation
 
-final class LocationToolkit {
-
+class LocationToolkit: @unchecked Sendable {
     static let shared = LocationToolkit()
 
     var simulatedLocation: CLLocation? {
@@ -39,6 +38,8 @@ final class LocationToolkit {
                 )
             }
             UserDefaults.standard.synchronize()
+
+            CLLocationManagerTracker.shared.triggerUpdateForAllLocations()
         }
     }
 

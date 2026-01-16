@@ -8,11 +8,10 @@
 
 import UIKit
 
+@MainActor
 final class FloatViewManager: NSObject {
-
     static let shared = FloatViewManager()
 
-    let bottomFloatView = BottomFloatView()
     let ballView = FloatBallView()
     let ballRedCancelView = BottomFloatView()
 
@@ -33,6 +32,14 @@ final class FloatViewManager: NSObject {
 
     static func animate(success: Bool) {
         shared.ballView.animate(success: success)
+    }
+    
+    static func animateWebSocket(connected: Bool) {
+        shared.ballView.animateWebSocket(connected: connected)
+    }
+
+    static func animateLeek(alloced: Bool) {
+        shared.ballView.animateLeek(alloced: alloced)
     }
 
     static func reset() {
@@ -62,13 +69,29 @@ final class FloatViewManager: NSObject {
     }
 
     func observers() {
+        // HTTP notifications
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name(rawValue: "reloadHttp_DebugSwift"),
             object: nil,
             queue: .main
         ) { notification in
-            if let success = notification.object as? Bool {
-                Self.animate(success: success)
+            let success = notification.object as? Bool
+            MainActor.assumeIsolated {
+                if let success = success {
+                    Self.animate(success: success)
+                }
+            }
+        }
+        
+        // WebSocket notifications
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("reloadWebSocket_DebugSwift"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                // Animate with connection success (🔗)
+                Self.animateWebSocket(connected: true)
             }
         }
     }
@@ -76,15 +99,11 @@ final class FloatViewManager: NSObject {
 
 extension FloatViewManager {
     private func setup() {
-        bottomFloatView.frame = .init(
-            x: DSFloatChat.screenWidth, y: DSFloatChat.screenHeight,
-            width: DSFloatChat.bottomViewFloatWidth, height: DSFloatChat.bottomViewFloatHeight
-        )
-        WindowManager.window.addSubview(bottomFloatView)
-
         ballRedCancelView.frame = .init(
-            x: DSFloatChat.screenWidth, y: DSFloatChat.screenHeight,
-            width: DSFloatChat.bottomViewFloatWidth, height: DSFloatChat.bottomViewFloatHeight
+            x: DSFloatChat.screenWidth,
+            y: DSFloatChat.screenHeight,
+            width: DSFloatChat.bottomViewFloatWidth,
+            height: DSFloatChat.bottomViewFloatHeight
         )
         ballRedCancelView.type = BottomFloatViewType.red
         WindowManager.window.addSubview(ballRedCancelView)
@@ -110,12 +129,12 @@ extension FloatViewManager: UINavigationControllerDelegate {
         if operation == .push {
             guard toVC == floatViewController else { return nil }
             return TransitionPush()
-        } else if operation == .pop {
+        }
+        if operation == .pop {
             guard fromVC == floatViewController else { return nil }
             return TransitionPop()
-        } else {
-            return nil
         }
+        return nil
     }
 }
 
@@ -131,7 +150,8 @@ extension FloatViewManager: FloatViewDelegate {
                     height: DSFloatChat.bottomViewFloatHeight
                 )
             }
-        ) { _ in }
+        ) { _ in
+        }
     }
 
     func floatViewMoved(floatView _: FloatBallView, point _: CGPoint) {
@@ -180,6 +200,7 @@ extension FloatViewManager: FloatViewDelegate {
                     height: DSFloatChat.bottomViewFloatHeight
                 )
             }
-        ) { _ in }
+        ) { _ in
+        }
     }
 }

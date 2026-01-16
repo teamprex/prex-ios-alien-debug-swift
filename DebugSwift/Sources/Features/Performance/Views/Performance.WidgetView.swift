@@ -9,9 +9,10 @@
 import UIKit
 
 enum PerformanceSection: Int {
-    case CPU
-    case Memory
-    case FPS
+    case cpu
+    case memory
+    case fps
+    case leaks
 }
 
 final class PerformanceWidgetView: TopLevelViewWrapper {
@@ -23,40 +24,38 @@ final class PerformanceWidgetView: TopLevelViewWrapper {
     let cpuValueLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: labelFontSize)
-        label.textColor = Theme.shared.fontColor
+        label.textColor = UIColor.white
         return label
     }()
 
     let memoryValueLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: labelFontSize)
-        label.textColor = Theme.shared.fontColor
+        label.textColor = UIColor.white
         return label
     }()
 
     let fpsValueLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: labelFontSize)
-        label.textColor = Theme.shared.fontColor
+        label.textColor = UIColor.white
+        return label
+    }()
+
+    let leaksValueLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: labelFontSize)
+        label.textColor = UIColor.white
         return label
     }()
 
     weak var delegate: PerformanceWidgetViewDelegate?
 
-    // MARK: - Initialization
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-    }
-
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
-
-    func updateValues(cpu: CGFloat, memory: CGFloat, fps: CGFloat) {
-        cpuValueLabel.text = String(format: "\("cpu".localized()): %.1lf%%", cpu)
-        memoryValueLabel.text = String(format: "\("memory".localized()): %.1lf MB", memory)
-        fpsValueLabel.text = String(format: "\("fps".localized()): %.0lf", fps)
+    func updateValues(cpu: CGFloat, memory: CGFloat, fps: CGFloat, leaks: CGFloat) {
+        cpuValueLabel.text = String(format: "\("CPU"): %.1lf%%", cpu)
+        memoryValueLabel.text = String(format: "\("Memory"): %.1lf MB", memory)
+        fpsValueLabel.text = String(format: "\("FPS"): %.0lf", fps)
+        leaksValueLabel.text = String(format: "\("Leaks"): %.0lf", leaks)
     }
 
     override func showWidgetWindow() {
@@ -77,7 +76,7 @@ final class PerformanceWidgetView: TopLevelViewWrapper {
             heightAnchor.constraint(equalToConstant: 30)
         ])
 
-        backgroundColor = Theme.shared.backgroundColor
+        backgroundColor = UIColor.black
 
         layer.borderWidth = 3.0 / UIScreen.main.scale
         layer.borderColor = UIColor.lightGray.cgColor
@@ -95,6 +94,9 @@ final class PerformanceWidgetView: TopLevelViewWrapper {
         stackView.addArrangedSubview(cpuValueLabel)
         stackView.addArrangedSubview(memoryValueLabel)
         stackView.addArrangedSubview(fpsValueLabel)
+        if !DebugSwift.App.shared.disableMethods.contains(.leaksDetector) {
+            stackView.addArrangedSubview(leaksValueLabel)
+        }
 
         addSubview(stackView)
 
@@ -115,6 +117,7 @@ final class PerformanceWidgetView: TopLevelViewWrapper {
     }
 }
 
+@MainActor
 protocol PerformanceWidgetViewDelegate: AnyObject {
     func performanceWidgetView(
         _ performanceWidgetView: PerformanceWidgetView, didTapOnSection section: PerformanceSection

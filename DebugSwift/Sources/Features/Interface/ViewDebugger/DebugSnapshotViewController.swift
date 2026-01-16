@@ -8,6 +8,7 @@
 
 import UIKit
 
+@MainActor
 protocol DebugSnapshotViewControllerDelegate: AnyObject {
     func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didSelectSnapshot snapshot: Snapshot)
     func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didDeselectSnapshot snapshot: Snapshot)
@@ -37,15 +38,15 @@ final class DebugSnapshotViewController: UIViewController, SnapshotViewDelegate,
         navigationItem.title = snapshot.element.label.name
     }
 
-    required init?(coder aDecoder: NSCoder) {
-        return nil
+    required init?(coder _: NSCoder) {
+        nil
     }
 
     override func loadView() {
         let snapshotView = SnapshotView(snapshot: snapshot, configuration: configuration)
         snapshotView.delegate = self
         self.snapshotView = snapshotView
-        self.view = snapshotView
+        view = snapshotView
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -82,40 +83,40 @@ final class DebugSnapshotViewController: UIViewController, SnapshotViewDelegate,
 
     // MARK: SnapshotViewDelegate
 
-    func snapshotView(_ snapshotView: SnapshotView, didSelectSnapshot snapshot: Snapshot) {
+    func snapshotView(_: SnapshotView, didSelectSnapshot snapshot: Snapshot) {
         delegate?.debugSnapshotViewController(self, didSelectSnapshot: snapshot)
     }
 
-    func snapshotView(_ snapshotView: SnapshotView, didDeselectSnapshot snapshot: Snapshot) {
+    func snapshotView(_: SnapshotView, didDeselectSnapshot snapshot: Snapshot) {
         delegate?.debugSnapshotViewController(self, didDeselectSnapshot: snapshot)
     }
 
     func snapshotView(_ snapshotView: SnapshotView, didLongPressSnapshot snapshot: Snapshot, point: CGPoint) {
-        let actionSheet = makeActionSheet(snapshot: snapshot, sourceView: snapshotView, sourcePoint: point) { snapshot in
+        let actionSheet = actionSheet(for: snapshot, from: snapshotView, at: point) {
             self.focus(snapshot: snapshot, callDelegate: true)
         }
         present(actionSheet, animated: true, completion: nil)
     }
 
-    func snapshotView(_ snapshotView: SnapshotView, showAlertController alertController: UIAlertController) {
+    func snapshotView(_: SnapshotView, showAlertController alertController: UIAlertController) {
         present(alertController, animated: true, completion: nil)
     }
 
     // MARK: DebugSnapshotViewControllerDelegate
 
-    func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didSelectSnapshot snapshot: Snapshot) {
+    func debugSnapshotViewController(_: DebugSnapshotViewController, didSelectSnapshot snapshot: Snapshot) {
         delegate?.debugSnapshotViewController(self, didSelectSnapshot: snapshot)
     }
 
-    func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didDeselectSnapshot snapshot: Snapshot) {
+    func debugSnapshotViewController(_: DebugSnapshotViewController, didDeselectSnapshot snapshot: Snapshot) {
         delegate?.debugSnapshotViewController(self, didDeselectSnapshot: snapshot)
     }
 
-    func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didFocusOnSnapshot snapshot: Snapshot) {
+    func debugSnapshotViewController(_: DebugSnapshotViewController, didFocusOnSnapshot snapshot: Snapshot) {
         delegate?.debugSnapshotViewController(self, didFocusOnSnapshot: snapshot)
     }
 
-    func debugSnapshotViewControllerWillNavigateBackToPreviousSnapshot(_ viewController: DebugSnapshotViewController) {
+    func debugSnapshotViewControllerWillNavigateBackToPreviousSnapshot(_: DebugSnapshotViewController) {
         delegate?.debugSnapshotViewControllerWillNavigateBackToPreviousSnapshot(self)
     }
 

@@ -11,7 +11,7 @@ final class CrashViewController: BaseController {
     private let tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.backgroundColor = Theme.shared.backgroundColor
+        tableView.backgroundColor = UIColor.black
         tableView.separatorColor = .darkGray
 
         return tableView
@@ -43,7 +43,7 @@ final class CrashViewController: BaseController {
             forCellReuseIdentifier: MenuSwitchTableViewCell.identifier
         )
 
-        view.backgroundColor = Theme.shared.backgroundColor
+        view.backgroundColor = UIColor.black
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
@@ -55,7 +55,7 @@ final class CrashViewController: BaseController {
     }
 
     func setupTabBar() {
-        title = "actions-crash".localized()
+        title = "Crashes"
         tabBarItem = UITabBarItem(
             title: title,
             image: .named(
@@ -67,19 +67,19 @@ final class CrashViewController: BaseController {
 
         guard viewModel.numberOfItems() != .zero else { return }
         addRightBarButton(
-            image: .named("trash.circle", default: "clean".localized()),
+            image: .named("trash.circle", default: "Clean"),
             tintColor: .red
         ) { [weak self] in
             self?.showAlert(
-                with: "delete.title".localized(),
-                title: "delete.subtitle".localized(),
-                leftButtonTitle: "delete.action".localized(),
+                with: "Warning",
+                title: "This action remove all data",
+                leftButtonTitle: "Delete",
                 leftButtonStyle: .destructive,
                 leftButtonHandler: { _ in
                     self?.viewModel.handleClearAction()
                     self?.tableView.reloadData()
                 },
-                rightButtonTitle: "delete.cancel".localized(),
+                rightButtonTitle: "Cancel",
                 rightButtonStyle: .cancel
             )
         }
@@ -87,11 +87,11 @@ final class CrashViewController: BaseController {
 }
 
 extension CrashViewController: UITableViewDataSource, UITableViewDelegate {
-    func numberOfSections(in tableView: UITableView) -> Int {
+    func numberOfSections(in _: UITableView) -> Int {
         Features.allCases.count
     }
 
-    func tableView(_: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(_: UITableView, numberOfRowsInSection _: Int) -> Int {
         viewModel.numberOfItems()
     }
 
@@ -116,10 +116,10 @@ extension CrashViewController: UITableViewDataSource, UITableViewDelegate {
     }
 
     func tableView(_: UITableView, heightForRowAt _: IndexPath) -> CGFloat {
-        80.0
+        UITableView.automaticDimension
     }
 
-    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    func tableView(_: UITableView, titleForHeaderInSection section: Int) -> String? {
         section == 1 && viewModel.numberOfItems() != 0 ? "Crashes" : nil
     }
 

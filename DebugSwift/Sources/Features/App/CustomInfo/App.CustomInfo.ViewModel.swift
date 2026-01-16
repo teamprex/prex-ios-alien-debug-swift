@@ -8,7 +8,6 @@
 import Foundation
 
 final class AppCustomInfoViewModel: NSObject, ResourcesGenericListViewModel {
-
     private var data: CustomData
     private var filteredInfo = [CustomData.Info]()
 
@@ -21,7 +20,7 @@ final class AppCustomInfoViewModel: NSObject, ResourcesGenericListViewModel {
 
     // MARK: - ViewModel
 
-    var isSearchActived: Bool = false
+    var isSearchActived = false
 
     var reloadData: (() -> Void)?
 
@@ -35,17 +34,13 @@ final class AppCustomInfoViewModel: NSObject, ResourcesGenericListViewModel {
         isSearchActived ? filteredInfo.count : data.infos.count
     }
 
-    func dataSourceForItem(atIndex index: Int) -> (title: String, value: String) {
+    func dataSourceForItem(atIndex index: Int) -> ViewData {
         let info = isSearchActived ? filteredInfo[index] : data.infos[index]
-        return (title: info.title, value: info.subtitle)
+        return .init(title: info.title, value: info.subtitle)
     }
 
-    func handleClearAction() {}
-
-    func handleDeleteItemAction(atIndex index: Int) {}
-
     func emptyListDescriptionString() -> String {
-        "empty-data".localized() + data.title
+        "No data found in the " + data.title
     }
 
     // MARK: - Search Functionality

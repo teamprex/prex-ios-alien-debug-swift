@@ -8,7 +8,6 @@
 import UIKit
 
 final class DebuggerDetailViewController: UIViewController {
-
     let imageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
@@ -29,7 +28,7 @@ final class DebuggerDetailViewController: UIViewController {
         title = snapshot.element.title
         textView.text = snapshot.element.description
         if let cgImage = snapshot.snapshotImage {
-            imageView.image =  .init(cgImage: cgImage).outline()
+            imageView.image = .init(cgImage: cgImage).outline()
         }
     }
 
@@ -40,9 +39,9 @@ final class DebuggerDetailViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        view.backgroundColor = Theme.shared.backgroundColor
-        textView.backgroundColor = Theme.shared.backgroundColor
-        textView.textColor = Theme.shared.fontColor
+        view.backgroundColor = UIColor.black
+        textView.backgroundColor = UIColor.black
+        textView.textColor = UIColor.white
 
         // Adiciona a UIImageView
         view.addSubview(imageView)
@@ -62,7 +61,7 @@ final class DebuggerDetailViewController: UIViewController {
             ),
             imageView.heightAnchor.constraint(
                 equalTo: view.heightAnchor,
-                multiplier: 1/3
+                multiplier: 1 / 3
             )
         ])
 

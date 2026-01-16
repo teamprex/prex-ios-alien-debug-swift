@@ -6,9 +6,10 @@
 //  Copyright © 2019 Indragie Karunaratne. All rights reserved.
 //
 
-import UIKit
 import SceneKit
+import UIKit
 
+@MainActor
 protocol SnapshotViewDelegate: AnyObject {
     /// Called when an element is select by tapping on it.
     func snapshotView(_ snapshotView: SnapshotView, didSelectSnapshot snapshot: Snapshot)
@@ -47,9 +48,10 @@ final class SnapshotView: UIView {
             depthSlider.minimumValue = .zero
         }
     }
+
     private var highlightedNodes: SnapshotNodes?
     private var hideHeaderNodes: Bool
-    private var hideBorderNodes: Bool = false
+    private var hideBorderNodes = false
     private var suppressSelectionEvents = false
 
     private var isLeft: Bool { snapshot.children.first?.children.isEmpty != false }
@@ -186,7 +188,8 @@ final class SnapshotView: UIView {
         addGestureRecognizer(longPressGestureRecognizer)
     }
 
-    required init?(coder aDecoder: NSCoder) {
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
@@ -233,16 +236,16 @@ final class SnapshotView: UIView {
 
     // MARK: Menu Item Actions
 
-    private func showHideHeaderNodes(sender: UIAlertAction) {
-        hideHeaderNodes = !hideHeaderNodes
+    private func showHideHeaderNodes(sender _: UIAlertAction) {
+        hideHeaderNodes.toggle()
 
         for (_, nodes) in snapshotIdentifierToNodesMap {
             nodes.headerNode?.isHidden = hideHeaderNodes
         }
     }
 
-    private func showHideBorderNodes(sender: UIAlertAction) {
-        hideBorderNodes = !hideBorderNodes
+    private func showHideBorderNodes(sender _: UIAlertAction) {
+        hideBorderNodes.toggle()
 
         for (_, nodes) in snapshotIdentifierToNodesMap {
             nodes.borderNode?.isHidden = hideBorderNodes
@@ -297,7 +300,7 @@ final class SnapshotView: UIView {
             previousNodes.highlightNode?.removeFromParentNode()
             previousNodes.highlightNode = nil
 
-            if !suppressSelectionEvents && snapshotNode == nil {
+            if !suppressSelectionEvents, snapshotNode == nil {
                 delegate?.snapshotView(self, didDeselectSnapshot: previousNodes.snapshot)
             }
             highlightedNodes = nil
@@ -328,7 +331,9 @@ final class SnapshotView: UIView {
             delegate?.snapshotView(self, didLongPressSnapshot: nodes.snapshot, point: point)
         } else {
             let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-            globalActions().forEach(alert.addAction)
+            for action in globalActions() {
+                alert.addAction(action)
+            }
             let cancel = UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel the action"), style: .cancel, handler: nil)
             alert.addAction(cancel)
             alert.preferredAction = cancel
@@ -384,12 +389,13 @@ private let smallZOffset: Float = 0.5
 
 /// Returns whether the header nodes should be hidden for a given z-axis spacing.
 private func shouldHideHeaderNodes(zSpacing: Float) -> Bool {
-    return zSpacing <= smallZOffset
+    zSpacing <= smallZOffset
 }
 
 /// Returns the nearest ancestor snapshot node starting at the specified node.
+@MainActor
 private func findNearestAncestorSnapshotNode(node: SCNNode?) -> SCNNode? {
-    guard let node = node else {
+    guard let node else {
         return nil
     }
     if node.name != nil {
@@ -399,6 +405,7 @@ private func findNearestAncestorSnapshotNode(node: SCNNode?) -> SCNNode? {
 }
 
 /// Returns a node that renders a highlight overlay over a specified snapshot.
+@MainActor
 private func highlightNode(snapshot: Snapshot, color: UIColor) -> SCNNode {
     let path = UIBezierPath(rect: CGRect(origin: .zero, size: snapshot.frame.size))
     let shape = SCNShape(path: path, extrusionDepth: .zero)
@@ -415,21 +422,24 @@ private func highlightNode(snapshot: Snapshot, color: UIColor) -> SCNNode {
 
 /// Returns a SceneKit node that recursively renders a hierarchy of UI elements
 /// starting at the specified snapshot.
-private func snapshotNode(snapshot: Snapshot,
-                          parentSnapshot: Snapshot?,
-                          rootNode: SCNNode,
-                          parentSnapshotNode: SCNNode?,
-                          depth: inout Int,
-                          snapshotIdentifierToNodesMap: inout [String: SnapshotNodes],
-                          configuration: SnapshotViewConfiguration,
-                          hideHeaderNodes: Bool) -> SCNNode? {
+@MainActor
+private func snapshotNode(
+    snapshot: Snapshot,
+    parentSnapshot: Snapshot?,
+    rootNode: SCNNode,
+    parentSnapshotNode: SCNNode?,
+    depth: inout Int,
+    snapshotIdentifierToNodesMap: inout [String: SnapshotNodes],
+    configuration: SnapshotViewConfiguration,
+    hideHeaderNodes: Bool
+) -> SCNNode? {
     // Ignore elements that are not visible. These should appear in
     // the tree view, but not in the 3D view.
     if snapshot.isHidden || snapshot.frame.size == .zero {
         return nil
     }
     // Create a node whose contents are the snapshot of the element.
-    let node = snapshotNode(snapshot: snapshot)
+    let node = snapshotNode(snapshot: snapshot, configuration: configuration)
     node.name = snapshot.identifier
 
     let nodes = SnapshotNodes(snapshot: snapshot, depth: depth)
@@ -442,7 +452,7 @@ private func snapshotNode(snapshot: Snapshot,
         // Flip the y-coordinate since the SceneKit coordinate system has
         // a flipped version of the UIKit coordinate system.
         let y: CGFloat
-        if let parentSnapshot = parentSnapshot {
+        if let parentSnapshot {
             y = parentSnapshot.frame.height - snapshot.frame.maxY
         } else {
             y = .zero
@@ -461,7 +471,7 @@ private func snapshotNode(snapshot: Snapshot,
         // root node.
         let positionRelativeToParent = SCNVector3(snapshot.frame.origin.x, y, .zero)
         var positionRelativeToRoot: SCNVector3
-        if let parentSnapshotNode = parentSnapshotNode {
+        if let parentSnapshotNode {
             positionRelativeToRoot = rootNode.convertPosition(positionRelativeToParent, from: parentSnapshotNode)
         } else {
             positionRelativeToRoot = positionRelativeToParent
@@ -506,14 +516,16 @@ private func snapshotNode(snapshot: Snapshot,
             childDepth = depth + 1
         }
 
-        if let _ = snapshotNode(snapshot: child,
-                                parentSnapshot: snapshot,
-                                rootNode: rootNode,
-                                parentSnapshotNode: node,
-                                depth: &childDepth,
-                                snapshotIdentifierToNodesMap: &snapshotIdentifierToNodesMap,
-                                configuration: configuration,
-                                hideHeaderNodes: hideHeaderNodes) {
+        if let _ = snapshotNode(
+            snapshot: child,
+            parentSnapshot: snapshot,
+            rootNode: rootNode,
+            parentSnapshotNode: node,
+            depth: &childDepth,
+            snapshotIdentifierToNodesMap: &snapshotIdentifierToNodesMap,
+            configuration: configuration,
+            hideHeaderNodes: hideHeaderNodes
+        ) {
             maxChildDepth = max(maxChildDepth, childDepth)
             frames.append(child.frame)
         }
@@ -523,21 +535,60 @@ private func snapshotNode(snapshot: Snapshot,
 }
 
 /// Returns a node that renders a snapshot image.
-private func snapshotNode(snapshot: Snapshot) -> SCNNode {
-    let path = UIBezierPath(rect: CGRect(origin: .zero, size: snapshot.frame.size))
+@MainActor
+private func snapshotNode(snapshot: Snapshot, configuration: SnapshotViewConfiguration) -> SCNNode {
+    let size = snapshot.frame.size
+    
+    // Calculate scale factor if view exceeds maximum texture size
+    let scaleFactor: CGFloat = if size.height > configuration.maxTextureSize {
+        configuration.maxTextureSize / size.height
+    } else {
+        1.0
+    }
+    
+    // Create scaled path
+    let scaledSize = CGSize(
+        width: size.width * scaleFactor,
+        height: size.height * scaleFactor
+    )
+    let path = UIBezierPath(rect: CGRect(origin: .zero, size: scaledSize))
     let shape = SCNShape(path: path, extrusionDepth: .zero)
+    
     let material = SCNMaterial()
     material.isDoubleSided = true
-    if let snapshot = snapshot.snapshotImage {
-        material.diffuse.contents = snapshot
+    
+    if let snapshotImage = snapshot.snapshotImage {
+        // Scale down image if needed
+        if scaleFactor < 1.0 {
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1.0
+            let renderer = UIGraphicsImageRenderer(size: scaledSize, format: format)
+            let scaledImage = renderer.image { context in
+                context.cgContext.interpolationQuality = configuration.scaleInterpolationQuality
+                let rect = CGRect(origin: .zero, size: scaledSize)
+                context.cgContext.draw(snapshotImage, in: rect)
+            }
+            material.diffuse.contents = scaledImage
+        } else {
+            material.diffuse.contents = snapshotImage
+        }
     } else {
-        material.diffuse.contents = Theme.shared.fontColor
+        material.diffuse.contents = UIColor.white
     }
+    
     shape.insertMaterial(material, at: .zero)
-    return SCNNode(geometry: shape)
+    
+    let node = SCNNode(geometry: shape)
+    // Scale node back up to original size
+    if scaleFactor < 1.0 {
+        node.scale = SCNVector3(1.0/scaleFactor, 1.0/scaleFactor, 1.0)
+    }
+    
+    return node
 }
 
 /// Returns a node that draws a line between two vertices.
+@MainActor
 private func lineFrom(vertex vertex1: SCNVector3, toVertex vertex2: SCNVector3, color: UIColor) -> SCNNode {
     let indices: [Int32] = [0, 1]
     let source = SCNGeometrySource(vertices: [vertex1, vertex2])
@@ -554,6 +605,7 @@ private func lineFrom(vertex vertex1: SCNVector3, toVertex vertex2: SCNVector3, 
 
 /// Returns an array of nodes that can be used to render a colored
 /// border around the specified node.
+@MainActor
 private func borderNode(node: SCNNode, color: UIColor) -> SCNNode {
     let (min, max) = node.boundingBox
     let topLeft = SCNVector3(x: min.x, y: max.y, z: smallZOffset)
@@ -576,8 +628,11 @@ private func borderNode(node: SCNNode, color: UIColor) -> SCNNode {
 
 /// Returns a node that renders a header above a snapshot node.
 /// The header contains the name text from the element, if specified.
-private func headerNode(snapshot: Snapshot,
-                        attributes: SnapshotViewConfiguration.HeaderAttributes) -> SCNNode? {
+@MainActor
+private func headerNode(
+    snapshot: Snapshot,
+    attributes: SnapshotViewConfiguration.HeaderAttributes
+) -> SCNNode? {
     guard let text = nameTextGeometry(label: snapshot.label, font: attributes.font) else {
         return nil
     }
@@ -608,6 +663,7 @@ private func headerNode(snapshot: Snapshot,
 }
 
 /// Returns a shape that is used to render the background of the header.
+@MainActor
 private func nameHeaderShape(frame: CGRect, color: UIColor, cornerRadius: CGFloat) -> SCNShape {
     let path = UIBezierPath(roundedRect: frame, byRoundingCorners: [.bottomLeft, .bottomRight], cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
     let shape = SCNShape(path: path, extrusionDepth: .zero)
@@ -619,6 +675,7 @@ private func nameHeaderShape(frame: CGRect, color: UIColor, cornerRadius: CGFloa
 }
 
 /// Returns a text geometry used to render text inside the header.
+@MainActor
 private func nameTextGeometry(label: ElementLabel, font: UIFont) -> SCNText? {
     guard let name = label.name else {
         return nil

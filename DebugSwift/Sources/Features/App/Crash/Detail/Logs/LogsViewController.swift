@@ -8,13 +8,12 @@
 import UIKit
 
 final class LogsViewController: BaseController {
-
     // MARK: - Properties
 
     private let textView: UITextView = {
         let textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.textColor = Theme.shared.fontColor
+        textView.textColor = UIColor.white
         textView.font = .systemFont(ofSize: 10)
         return textView
     }()
@@ -36,8 +35,8 @@ final class LogsViewController: BaseController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        title = "logs".localized()
-        view.backgroundColor = Theme.shared.backgroundColor
+        title = "Logs"
+        view.backgroundColor = UIColor.black
 
         view.addSubview(textView)
 

@@ -23,11 +23,46 @@ extension Data {
             if let formattedString = String(data: jsonData, encoding: .utf8) {
                 return formattedString
             }
-        } catch {
-            Debug.print("Error formatting JSON: \(error)")
-        }
+        } catch {}
 
-        return ""
+        // Can adjust to get the image and the jsons formatted
+        return String(data: self, encoding: .utf8) ?? String(decoding: self, as: UTF8.self)
+    }
+
+    // MARK: - JSON Conversion
+    
+    func toJSONString() -> String? {
+        // Try to parse as JSON
+        if let jsonObject = try? JSONSerialization.jsonObject(with: self, options: []),
+           let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.sortedKeys]),
+           let jsonString = String(data: prettyData, encoding: .utf8) {
+            // Return compact JSON for display
+            return jsonString.replacingOccurrences(of: "\n", with: " ")
+                            .replacingOccurrences(of: "  ", with: " ")
+        }
+        
+        // Try as plain string
+        if let string = String(data: self, encoding: .utf8) {
+            return string
+        }
+        
+        return nil
+    }
+    
+    func toPrettyJSONString() -> String? {
+        // Try to parse as JSON with pretty printing
+        if let jsonObject = try? JSONSerialization.jsonObject(with: self, options: []),
+           let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys]),
+           let jsonString = String(data: prettyData, encoding: .utf8) {
+            return jsonString
+        }
+        
+        // Try as plain string
+        if let string = String(data: self, encoding: .utf8) {
+            return string
+        }
+        
+        return nil
     }
 }
 
@@ -39,11 +74,9 @@ extension [String: String] {
 
 extension [String: Any] {
     func formattedCurlString() -> String {
-        let headersString = map { key, value in
+        return map { key, value in
             "\(key): \(value)"
         }.joined(separator: "\\n-H ")
-
-        return headersString
     }
 }
 
@@ -51,9 +84,8 @@ extension Data {
     func formattedCurlString() -> String {
         if let string = String(data: self, encoding: .utf8) {
             return string.escapedForCurl()
-        } else {
-            return ""
         }
+        return ""
     }
 }
 
