@@ -7,7 +7,11 @@
 "max-cpu-usage" = "Uso máximo da CPU";
 "memory-usage" = "Uso de memória";
 "max-memory-usage" = "Uso máximo de memória";
-"simulate-memory-warning" = "Simular aviso de memória";
+"simulate-memory-warning" = "🚨 Simular Aviso de Memória";
+"simulate-memory-warning-active" = "⚠️ Simulando Aviso de Memória...";
+"see-leaks" = "⚠️ Ver todos os Leaks";
+"current-leaks" = "Número de Leaks";
+"leaks" = "Leaks";
 "fps" = "FPS";
 "cpu" = "CPU";
 "memory" = "Memória";
@@ -21,6 +25,7 @@
 "show-grid-overlay" = "Mostrar Grid";
 "colorized-view-borders" = "Bordas de visualização coloridas";
 "slow-animations" = "Animações lentas";
+"dark-mode" = "Modo Escuro";
 
 "device-info" = "Informações do Dispositivo";
 "simulated-location" = "Localização simulada";
@@ -68,12 +73,16 @@
 "delete.cancel" = "Cancelar";
 
 "date" = "Data";
-"crash-name" = "Falha";
+"crash-name" = "Erro";
 "reason" = "Motivo";
 "no-reason" = "Não encontrado";
+"snapshot" = "Snapshot";
+"logs" = "Logs";
+"log-error" = "Log de Erro";
 "context" = "Contexto";
+"empty-directory" = "Este diretório está vazio.";
 "name" = "Nome";
-"user-info" = "User Info";
+"user-info" = "Informações do Usuário";
 
 "copy" = "Copiar";
 "close" = "Fechar";
@@ -216,3 +225,5 @@
 "error-invalid-ssl-certificate" = "Certificado SSL Inválido";
 "error-network-read-timeout" = "Tempo Limite de Leitura de Rede";
 "error-network-connect-timeout" = "Tempo Limite de Conexão de Rede";
+"alert.url.copied.title" = "Copiado!";
+"alert.url.copied.description" = "Você pode colar esta url quando necessário.";

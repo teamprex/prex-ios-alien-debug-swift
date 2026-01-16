@@ -19,7 +19,7 @@ final class ViewDebuggerViewController:
     private var pageViewController: UIPageViewController?
 
     private lazy var debugSnapshotViewController: DebugSnapshotViewController = { [unowned self] in
-        return .init(
+        .init(
             snapshot: snapshot,
             configuration: configuration.snapshotViewConfiguration,
             delegate: self
@@ -67,7 +67,8 @@ final class ViewDebuggerViewController:
         super.init(nibName: nil, bundle: nil)
     }
 
-    required init?(coder aDecoder: NSCoder) {
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
@@ -87,38 +88,38 @@ final class ViewDebuggerViewController:
 
     // MARK: DebugSnapshotViewControllerDelegate
 
-    func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didSelectSnapshot snapshot: Snapshot) {
+    func debugSnapshotViewController(_: DebugSnapshotViewController, didSelectSnapshot snapshot: Snapshot) {
         hierarchyViewController.selectRow(forSnapshot: snapshot)
     }
 
-    func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didDeselectSnapshot snapshot: Snapshot) {
+    func debugSnapshotViewController(_: DebugSnapshotViewController, didDeselectSnapshot snapshot: Snapshot) {
         hierarchyViewController.deselectRow(forSnapshot: snapshot)
     }
 
-    func debugSnapshotViewController(_ viewController: DebugSnapshotViewController, didFocusOnSnapshot snapshot: Snapshot) {
+    func debugSnapshotViewController(_: DebugSnapshotViewController, didFocusOnSnapshot snapshot: Snapshot) {
         hierarchyNavigationController.popToRootViewController(animated: false)
         hierarchyViewController.focus(snapshot: snapshot)
     }
 
-    func debugSnapshotViewControllerWillNavigateBackToPreviousSnapshot(_ viewController: DebugSnapshotViewController) {
+    func debugSnapshotViewControllerWillNavigateBackToPreviousSnapshot(_: DebugSnapshotViewController) {
         hierarchyNavigationController.popViewController(animated: true)
     }
 
     // MARK: HierarchyTableViewControllerDelegate
 
-    func hierarchyTableViewController(_ viewController: HierarchyTableViewController, didSelectSnapshot snapshot: Snapshot) {
+    func hierarchyTableViewController(_: HierarchyTableViewController, didSelectSnapshot snapshot: Snapshot) {
         debugSnapshotViewController.select(snapshot: snapshot)
     }
 
-    func hierarchyTableViewController(_ viewController: HierarchyTableViewController, didDeselectSnapshot snapshot: Snapshot) {
+    func hierarchyTableViewController(_: HierarchyTableViewController, didDeselectSnapshot snapshot: Snapshot) {
         debugSnapshotViewController.deselect(snapshot: snapshot)
     }
 
-    func hierarchyTableViewController(_ viewController: HierarchyTableViewController, didFocusOnSnapshot snapshot: Snapshot) {
+    func hierarchyTableViewController(_: HierarchyTableViewController, didFocusOnSnapshot snapshot: Snapshot) {
         debugSnapshotViewController.focus(snapshot: snapshot)
     }
 
-    func hierarchyTableViewControllerWillNavigateBackToPreviousSnapshot(_ viewController: HierarchyTableViewController) {
+    func hierarchyTableViewControllerWillNavigateBackToPreviousSnapshot(_: HierarchyTableViewController) {
         snapshotNavigationController.popViewController(animated: true)
     }
 
@@ -176,7 +177,7 @@ final class ViewDebuggerViewController:
     }
 
     private func selectViewController(index: Int) {
-        guard let pageViewController = pageViewController else {
+        guard let pageViewController else {
             return
         }
         switch index {
@@ -186,7 +187,6 @@ final class ViewDebuggerViewController:
             pageViewController.setViewControllers([hierarchyNavigationController], direction: .forward, animated: false, completion: nil)
         default:
             fatalError("Invalid view controller index \(index)")
-            break
         }
     }
 
@@ -196,7 +196,7 @@ final class ViewDebuggerViewController:
         selectViewController(index: sender.selectedSegmentIndex)
     }
 
-    @objc private func done(sender: UIBarButtonItem) {
+    @objc private func done(sender _: UIBarButtonItem) {
         FloatViewManager.isShowingDebuggerView = false
         dismiss(animated: true)
     }

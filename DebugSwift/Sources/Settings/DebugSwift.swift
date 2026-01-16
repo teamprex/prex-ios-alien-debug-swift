@@ -7,64 +7,53 @@
 
 import UIKit
 
-public enum DebugSwift {
-    public static func setup() {
-        LocalizationManager.shared.loadBundle()
-        FeatureHandling.shared.selectedFeatureHandler(viewController : nil)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            FloatViewManager.setup(TabBarController())
-        }
-
-        LaunchTimeTracker.measureAppStartUpTime()
-    }
+public class DebugSwift {
     
-    public static func setup(hideFeatures: [DebugSwiftFeatures]) {
-        FeatureHandling.shared.hide(features: hideFeatures)
+    public init() {}
+    
+    @discardableResult
+    @MainActor
+    public func setup(
+        hideFeatures features: [DebugSwiftFeature] = [],
+        disable methods: [DebugSwiftSwizzleFeature] = [],
+        enableBetaFeatures betaFeatures: [DebugSwiftBetaFeature] = []
+    ) -> Self {
+        FeatureHandling.setup(hide: features, disable: methods, enableBeta: betaFeatures)
+        LaunchTimeTracker.shared.measureAppStartUpTime()
+
+        return self
     }
 
-    public static func show() {
+    @discardableResult
+    public func show() -> Self {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             FloatViewManager.show()
         }
+
+        return self
     }
 
-    public static func hide() {
+    @discardableResult
+    @MainActor
+    public func hide() -> Self {
         FloatViewManager.remove()
+        return self
     }
 
-    public static func toggle() {
+    @discardableResult
+    @MainActor
+    public func toggle() -> Self {
         FloatViewManager.toggle()
+        return self
     }
     
-    public static func theme(appearance: Appearance) {
-        Theme.shared.setAppearance(appearance: appearance)
-    }
-    
-    public static func toggleDebugger(_ enable: Bool) {
-        DebugSwift.Debugger.enable = enable
-    }
-}
-
-extension DebugSwift {
-    public enum Network {
-        public static var ignoredURLs = [String]()
-        public static var onlyURLs = [String]()
-    }
-
-    public enum App {
-        public static var customInfo: (() -> [CustomData])?
-        public static var customAction: (() -> [CustomAction])?
-        public static var customControllers: (() -> [UIViewController])?
-    }
-
-    public enum Console {
-        public static var ignoredLogs = [String]()
-        public static var onlyLogs = [String]()
-    }
-
-    enum Debugger {
-        @UserDefaultAccess(key: .debugger, defaultValue: true)
-        public static var enable: Bool
+    /// Enable or disable debug logging in Xcode console
+    /// - Parameter enable: `true` to enable debug logs, `false` to disable
+    /// - Returns: `Self` for method chaining
+    @discardableResult
+    @MainActor
+    public func toggleDebugger(_ enable: Bool) -> Self {
+        Debug.enable = enable
+        return self
     }
 }

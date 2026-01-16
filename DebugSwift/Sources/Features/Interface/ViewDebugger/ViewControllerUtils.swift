@@ -1,5 +1,5 @@
 //
-//  ViewUtils.swift
+//  ViewControllerUtils.swift
 //  InAppViewDebugger
 //
 //  Created by Indragie Karunaratne on 4/4/19.
@@ -8,10 +8,12 @@
 
 import UIKit
 
+@MainActor
 func getNearestAncestorViewController(responder: UIResponder) -> UIViewController? {
     if let viewController = responder as? UIViewController {
         return viewController
-    } else if let nextResponder = responder.next {
+    }
+    if let nextResponder = responder.next {
         return getNearestAncestorViewController(responder: nextResponder)
     }
     return nil

@@ -8,20 +8,52 @@
 
 import UIKit
 
-final class ResourcesViewController: BaseController {
+final class ResourcesViewController: BaseController, MainFeatureType {
+    private enum Item: CaseIterable {
+        case fileManager
+        case userDefaults
+        case keychain
+        case persistentData
+        case coreData
+        case httpCookies
+        case database
+
+        var localized: String {
+            switch self {
+            case .fileManager:
+                "Files"
+            case .userDefaults:
+                "User Defaults"
+            case .keychain:
+                "Keychain"
+            case .persistentData:
+                "Persistent Data"
+            case .coreData:
+                ""
+            case .httpCookies:
+                "HTTP Cookies"
+            case .database:
+                "Database Browser"
+            }
+        }
+    }
+
+    var controllerType: DebugSwiftFeature { .resources }
+
     private let tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.backgroundColor = Theme.shared.backgroundColor
+        tableView.backgroundColor = UIColor.black
         tableView.separatorColor = .darkGray
 
         return tableView
     }()
 
-    private let items = [
-        "files-title".localized(),
-        "user-defaults".localized(),
-        "keychain".localized()
+    private let items: [Item] = [
+        .fileManager,
+        .persistentData,
+        .httpCookies,
+        .database
     ]
 
     override init() {
@@ -55,7 +87,7 @@ final class ResourcesViewController: BaseController {
     }
 
     func setupTabBar() {
-        title = "resources-title".localized()
+        title = "Resources"
         tabBarItem = UITabBarItem(
             title: title,
             image: .named("filemenu.and.selection"),
@@ -74,7 +106,7 @@ extension ResourcesViewController: UITableViewDataSource, UITableViewDelegate {
             withIdentifier: .cell,
             for: indexPath
         )
-        cell.setup(title: items[indexPath.row])
+        cell.setup(title: items[indexPath.row].localized)
         return cell
     }
 
@@ -84,26 +116,27 @@ extension ResourcesViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_: UITableView, didSelectRowAt indexPath: IndexPath) {
         var controller: UIViewController?
-        switch indexPath.row {
-        case 0:
+        switch items[indexPath.row] {
+        case .fileManager:
             // Handle "File" selection
             controller = ResourcesFilesViewController()
-        case 1:
+        case .userDefaults:
             let viewModel = ResourcesUserDefaultsViewModel()
             controller = ResourcesGenericController(viewModel: viewModel)
-        case 2:
+        case .keychain:
             let viewModel = ResourcesKeychainViewModel()
             controller = ResourcesGenericController(viewModel: viewModel)
-        case 3:
+        case .persistentData:
+            controller = ResourcesTabbedController()
+        case .coreData:
             // Handle "CoreData" selection
             showAlert(with: "TODO")
 
-        case 4:
-            // Handle "Cookies" selection
-            showAlert(with: "TODO")
-
-        default:
-            break
+        case .httpCookies:
+            let viewModel = ResourcesHTTPCookiesViewModel()
+            controller = ResourcesGenericController(viewModel: viewModel)
+        case .database:
+            controller = DatabaseBrowserViewController()
         }
         if let controller {
             navigationController?.pushViewController(controller, animated: true)

@@ -12,10 +12,11 @@ import UIKit
 extension UIWindow {
     // MARK: - Constants
 
+    private static var associatedTouchIndicators: Void?
+    private static var associatedReusableTouchIndicators: Void?
+    
     private enum Constants {
         static let touchIndicatorViewMinAlpha: CGFloat = 0.6
-        static var associatedTouchIndicators: UInt8 = 0
-        static var associatedReusableTouchIndicators: UInt8 = 1
     }
 
     static var lastTouch: CGPoint?
@@ -24,23 +25,22 @@ extension UIWindow {
 
     private var touchIndicators: NSMapTable<UITouch, TouchIndicatorView> {
         get {
-            if let touchIndicators = objc_getAssociatedObject(self, &Constants.associatedTouchIndicators)
+            if let touchIndicators = objc_getAssociatedObject(self, &UIWindow.associatedTouchIndicators)
                 as? NSMapTable<UITouch, TouchIndicatorView> {
                 return touchIndicators
-            } else {
-                let touchIndicators = NSMapTable<UITouch, TouchIndicatorView>(
-                    keyOptions: .weakMemory, valueOptions: .weakMemory
-                )
-                objc_setAssociatedObject(
-                    self, &Constants.associatedTouchIndicators, touchIndicators,
-                    .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-                )
-                return touchIndicators
             }
+            let touchIndicators = NSMapTable<UITouch, TouchIndicatorView>(
+                keyOptions: .weakMemory, valueOptions: .weakMemory
+            )
+            objc_setAssociatedObject(
+                self, &UIWindow.associatedTouchIndicators, touchIndicators,
+                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+            )
+            return touchIndicators
         }
         set {
             objc_setAssociatedObject(
-                self, &Constants.associatedTouchIndicators, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+                self, &UIWindow.associatedTouchIndicators, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC
             )
         }
     }
@@ -52,24 +52,23 @@ extension UIWindow {
             if
                 let reusableTouchIndicators = objc_getAssociatedObject(
                     self,
-                    &Constants.associatedReusableTouchIndicators
+                    &UIWindow.associatedReusableTouchIndicators
                 ) as? NSMutableSet {
                 return reusableTouchIndicators
-            } else {
-                let reusableTouchIndicators = NSMutableSet()
-                objc_setAssociatedObject(
-                    self,
-                    &Constants.associatedReusableTouchIndicators,
-                    reusableTouchIndicators,
-                    .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-                )
-                return reusableTouchIndicators
             }
+            let reusableTouchIndicators = NSMutableSet()
+            objc_setAssociatedObject(
+                self,
+                &UIWindow.associatedReusableTouchIndicators,
+                reusableTouchIndicators,
+                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+            )
+            return reusableTouchIndicators
         }
         set {
             objc_setAssociatedObject(
                 self,
-                &Constants.associatedReusableTouchIndicators,
+                &UIWindow.associatedReusableTouchIndicators,
                 newValue,
                 .OBJC_ASSOCIATION_RETAIN_NONATOMIC
             )
@@ -142,9 +141,8 @@ extension UIWindow {
         if let indicatorView = reusableTouchIndicators.anyObject() as? TouchIndicatorView {
             reusableTouchIndicators.remove(indicatorView)
             return indicatorView
-        } else {
-            return TouchIndicatorView.indicatorView()
         }
+        return TouchIndicatorView.indicatorView()
     }
 
     func db_moveTouchIndicator(with touch: UITouch) {
@@ -178,7 +176,7 @@ extension UIWindow {
     // MARK: - UIDebuggingInformationOverlay
 
     @objc func db_debuggingInformationOverlayInit() -> UIWindow {
-        type(of: self).init()
+        Self()
     }
 
     @objc var state: UIGestureRecognizer.State {
@@ -195,7 +193,7 @@ extension UIWindow {
     }
 
     static var keyWindow: UIWindow? {
-        UIApplication.shared.windows.first(where: \.isKeyWindow)
+        UIApplication.keyWindow
     }
 
     var _snapshot: UIImage? {
@@ -241,18 +239,27 @@ extension UIWindow {
 
 // MARK: - DispatchQueue extension for once
 
-extension DispatchQueue {
-    private static var _onceTracker = [String]()
-
-    class func once(token: String, block: () -> Void) {
-        objc_sync_enter(self)
-        defer { objc_sync_exit(self) }
-
-        if _onceTracker.contains(token) {
+private final class OnceTracker: @unchecked Sendable {
+    private let lock = NSLock()
+    private var executedTokens: Set<String> = []
+    
+    func execute(token: String, block: () -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        if executedTokens.contains(token) {
             return
         }
-
-        _onceTracker.append(token)
+        
+        executedTokens.insert(token)
         block()
+    }
+}
+
+extension DispatchQueue {
+    private static let onceTracker = OnceTracker()
+
+    class func once(token: String, block: () -> Void) {
+        onceTracker.execute(token: token, block: block)
     }
 }

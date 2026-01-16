@@ -11,7 +11,7 @@ final class CrashDetailViewController: BaseController {
     private let tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.backgroundColor = Theme.shared.backgroundColor
+        tableView.backgroundColor = UIColor.black
         tableView.separatorColor = .darkGray
 
         return tableView
@@ -45,7 +45,7 @@ final class CrashDetailViewController: BaseController {
             forCellReuseIdentifier: MenuSwitchTableViewCell.identifier
         )
 
-        view.backgroundColor = Theme.shared.backgroundColor
+        view.backgroundColor = UIColor.black
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
@@ -62,7 +62,7 @@ final class CrashDetailViewController: BaseController {
 
     private func setupShare() {
         addRightBarButton(
-            image: .named("square.and.arrow.up", default: "share".localized())
+            image: .named("square.and.arrow.up", default: "Share")
         ) { [weak self] in
             self?.share()
         }
@@ -103,7 +103,7 @@ final class CrashDetailViewController: BaseController {
 }
 
 extension CrashDetailViewController: UITableViewDataSource, UITableViewDelegate {
-    func numberOfSections(in tableView: UITableView) -> Int {
+    func numberOfSections(in _: UITableView) -> Int {
         Features.allCases.count
     }
 
@@ -112,8 +112,8 @@ extension CrashDetailViewController: UITableViewDataSource, UITableViewDelegate 
     }
 
     func tableView(
-        _ tableView: UITableView,
-        heightForHeaderInSection section: Int
+        _: UITableView,
+        heightForHeaderInSection _: Int
     ) -> CGFloat {
         20.0
     }
@@ -143,19 +143,19 @@ extension CrashDetailViewController: UITableViewDataSource, UITableViewDelegate 
         Features(rawValue: indexPath.section)?.heightForRow ?? .zero
     }
 
-    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    func tableView(_: UITableView, titleForHeaderInSection section: Int) -> String? {
         Features(rawValue: section)?.title
     }
 
-    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+    func tableView(_: UITableView, viewForFooterInSection _: Int) -> UIView? {
         .init()
     }
 
-    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+    func tableView(_: UITableView, heightForFooterInSection _: Int) -> CGFloat {
         20
     }
 
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    func tableView(_: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard Features(rawValue: indexPath.section) == .context else { return }
 
         if
@@ -164,7 +164,14 @@ extension CrashDetailViewController: UITableViewDataSource, UITableViewDelegate 
             let controller = SnapshotViewController(image: image)
             navigationController?.pushViewController(controller, animated: true)
         } else {
-            let output = viewModel.data.context.consoleOutput
+            let output: String
+
+            if indexPath.row == 1, !viewModel.data.context.consoleOutput.isEmpty {
+                output = viewModel.data.context.consoleOutput
+            } else {
+                output = viewModel.data.context.errorOutput
+            }
+
             let controller = LogsViewController(text: output)
             navigationController?.pushViewController(controller, animated: true)
         }
@@ -172,6 +179,7 @@ extension CrashDetailViewController: UITableViewDataSource, UITableViewDelegate 
 }
 
 extension CrashDetailViewController {
+    @MainActor
     enum Features: Int, CaseIterable {
         case details
         case context
@@ -180,9 +188,9 @@ extension CrashDetailViewController {
         var title: String {
             switch self {
             case .details:
-                return "network-details-title".localized()
+                return "Details"
             case .context:
-                return "context".localized()
+                return "Context"
             case .stackTrace:
                 return "Stack Trace"
             }
@@ -191,11 +199,11 @@ extension CrashDetailViewController {
         var heightForRow: CGFloat {
             switch self {
             case .details:
-                return 50
+                return -1 // UITableView interprets -1 as automatic dimension
             case .context:
                 return 80
             case .stackTrace:
-                return UITableView.automaticDimension
+                return -1 // UITableView interprets -1 as automatic dimension
             }
         }
     }

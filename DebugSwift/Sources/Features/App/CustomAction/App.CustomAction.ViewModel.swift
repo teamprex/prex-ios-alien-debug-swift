@@ -8,7 +8,6 @@
 import Foundation
 
 final class AppCustomActionViewModel: NSObject, ResourcesGenericListViewModel {
-
     private var data: CustomAction
     private var filtered = CustomAction.Actions()
 
@@ -21,7 +20,7 @@ final class AppCustomActionViewModel: NSObject, ResourcesGenericListViewModel {
 
     // MARK: - ViewModel
 
-    var isSearchActived: Bool = false
+    var isSearchActived = false
     var isDeleteEnable: Bool { false }
     var isCustomActionEnable: Bool { true }
 
@@ -33,17 +32,13 @@ final class AppCustomActionViewModel: NSObject, ResourcesGenericListViewModel {
         isSearchActived ? filtered.count : data.actions.count
     }
 
-    func dataSourceForItem(atIndex index: Int) -> (title: String, value: String) {
+    func dataSourceForItem(atIndex index: Int) -> ViewData {
         let info = isSearchActived ? filtered[index] : data.actions[index]
-        return (title: info.title, value: "")
+        return .init(title: info.title)
     }
 
-    func handleClearAction() {}
-
-    func handleDeleteItemAction(atIndex index: Int) {}
-
     func emptyListDescriptionString() -> String {
-        "empty-data".localized() + data.title
+        "No data found in the " + data.title
     }
 
     // MARK: - Search Functionality

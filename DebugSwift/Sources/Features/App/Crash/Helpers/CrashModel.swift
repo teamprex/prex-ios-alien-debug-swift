@@ -17,7 +17,7 @@ struct CrashModel: Codable, Equatable {
         type: CrashType,
         details: Details,
         context: Context = .builder(),
-        traces: [Trace] = .builder()
+        traces: [Trace]
     ) {
         self.type = type
         self.details = details
@@ -41,15 +41,30 @@ extension CrashModel {
         let reachability: String
 
         static func builder(name: String) -> Self {
-            .init(
-                name: name,
-                date: .init(),
-                appVersion: UserInfo.getAppVersionInfo()?.detail,
-                appBuild: UserInfo.getAppBuildInfo()?.detail,
-                iosVersion: UserInfo.getIOSVersionInfo().detail,
-                deviceModel: UserInfo.getDeviceModelInfo().detail,
-                reachability: UserInfo.getReachability().detail
-            )
+            if Thread.isMainThread {
+                return MainActor.assumeIsolated {
+                    .init(
+                        name: name,
+                        date: .init(),
+                        appVersion: UserInfo.getAppVersionInfo()?.detail,
+                        appBuild: UserInfo.getAppBuildInfo()?.detail,
+                        iosVersion: UserInfo.getIOSVersionInfo().detail,
+                        deviceModel: UserInfo.getDeviceModelInfo().detail,
+                        reachability: UserInfo.getReachability().detail
+                    )
+                }
+            } else {
+                // When not on main thread, we can't access main actor isolated properties
+                return .init(
+                    name: name,
+                    date: .init(),
+                    appVersion: UserInfo.getAppVersionInfo()?.detail,
+                    appBuild: UserInfo.getAppBuildInfo()?.detail,
+                    iosVersion: "Unknown",
+                    deviceModel: "Unknown",
+                    reachability: UserInfo.getReachability().detail
+                )
+            }
         }
     }
 }
@@ -58,6 +73,7 @@ extension CrashModel {
     struct Context: Codable {
         let image: Data?
         let consoleOutput: String
+        let errorOutput: String
 
         var uiImage: UIImage? {
             guard let image else { return nil }
@@ -65,10 +81,22 @@ extension CrashModel {
         }
 
         static func builder() -> Self {
-            .init(
-                image: UIWindow.keyWindow?._snapshotWithTouch?.pngData(),
-                consoleOutput: LogIntercepter.shared.consoleOutput.reversed().joined(separator: "\n")
-            )
+            if Thread.isMainThread {
+                return MainActor.assumeIsolated {
+                    .init(
+                        image: UIWindow.keyWindow?._snapshotWithTouch?.pngData(),
+                        consoleOutput: ConsoleOutput.shared.printAndNSLogOutputFormatted(),
+                        errorOutput: ConsoleOutput.shared.errorOutputFormatted()
+                    )
+                }
+            } else {
+                // When not on main thread, we can't capture the snapshot
+                return .init(
+                    image: nil,
+                    consoleOutput: ConsoleOutput.shared.printAndNSLogOutputFormatted(),
+                    errorOutput: ConsoleOutput.shared.errorOutputFormatted()
+                )
+            }
         }
     }
 }
@@ -85,24 +113,13 @@ extension CrashModel {
 }
 
 extension [CrashModel.Trace] {
-    static func builder() -> Self {
+    static func builder(_ stack: [String]) -> [CrashModel.Trace] {
         var traces = [CrashModel.Trace]()
-        for symbol in Thread.callStackSymbols {
-            var detail = ""
-            if let className = Trace.classNameFromSymbol(symbol) {
-                detail += "Class: \(className)\n"
-            }
-            if let fileInfo = Trace.fileInfoFromSymbol(symbol) {
-                detail += """
-                    File: \(fileInfo.file)\n,
-                    Line: \(fileInfo.line)\n,
-                    Function: \(fileInfo.function)\n
-                """
-            }
 
+        for symbol in stack {
             let trace = CrashModel.Trace(
                 title: symbol,
-                detail: detail
+                detail: ""
             )
             traces.append(trace)
         }

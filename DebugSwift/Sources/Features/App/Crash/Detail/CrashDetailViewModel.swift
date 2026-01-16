@@ -9,7 +9,6 @@ import Foundation
 import UIKit
 
 final class CrashDetailViewModel: NSObject {
-
     private(set) var data: CrashModel
 
     init(data: CrashModel) {
@@ -20,7 +19,7 @@ final class CrashDetailViewModel: NSObject {
     // MARK: - ViewModel
 
     func viewTitle() -> String {
-        "actions-crash".localized()
+        "Crashes"
     }
 
     func numberOfItems(section: Int) -> Int {
@@ -39,32 +38,36 @@ final class CrashDetailViewModel: NSObject {
     var details: [UserInfo.Info] {
         [
             .init(
-                title: "crash-name".localized(),
+                title: "Error",
                 detail: data.type.rawValue
             ),
             .init(
-                title: "date".localized(),
+                title: "Date",
                 detail: data.details.date.formatted()
             ),
             .init(
-                title: "app-version".localized(),
+                title: "App Version:",
                 detail: data.details.appVersion ?? ""
             ),
             .init(
-                title: "build-version".localized(),
+                title: "Build Version:",
                 detail: data.details.appBuild ?? ""
             ),
             .init(
-                title: "ios-version".localized(),
+                title: "iOS Version:",
                 detail: data.details.iosVersion
             ),
             .init(
-                title: "device-model".localized(),
+                title: "Device Model:",
                 detail: data.details.deviceModel
             ),
             .init(
-                title: "reachability-status".localized(),
+                title: "Connection Type:",
                 detail: data.details.reachability
+            ),
+            .init(
+                title: "Error",
+                detail: data.details.name
             )
         ]
     }
@@ -72,11 +75,17 @@ final class CrashDetailViewModel: NSObject {
     var contexts: [UserInfo.Info] {
         var infos = [UserInfo.Info]()
         if data.context.uiImage != nil {
-            infos.append(.init(title: "snapshot".localized(), detail: ""))
+            infos.append(.init(title: "Snapshot", detail: ""))
         }
+
         if !data.context.consoleOutput.isEmpty {
-            infos.append(.init(title: "logs".localized(), detail: ""))
+            infos.append(.init(title: "Logs", detail: ""))
         }
+
+        if !data.context.errorOutput.isEmpty {
+            infos.append(.init(title: "Error Log", detail: ""))
+        }
+
         return infos
     }
 
@@ -94,7 +103,7 @@ final class CrashDetailViewModel: NSObject {
     }
 
     func getAllValues() -> String {
-        var result = "network-details-title".localized() + ":\n"
+        var result = "Details" + ":\n"
         for detail in details {
             result += "\(detail.title): \(detail.detail)\n"
         }

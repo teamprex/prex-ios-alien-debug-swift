@@ -7,13 +7,18 @@
 
 import UIKit
 
-enum UserInfo {
-
-    struct Info {
-        let title: String
-        let detail: String
+public enum UserInfo {
+    public struct Info {
+        public let title: String
+        public let detail: String
+        
+        public init(title: String, detail: String) {
+            self.title = title
+            self.detail = detail
+        }
     }
 
+    @MainActor
     static var infos: [Info] {
         [
             getAppVersionInfo(),
@@ -23,6 +28,7 @@ enum UserInfo {
             getScreenResolution(),
             getDeviceModelInfo(),
             getIOSVersionInfo(),
+            getAPNSTokenInfo(),
             getMeasureAppStartUpTime(),
             getReachability()
         ].compactMap { $0 }
@@ -34,7 +40,7 @@ enum UserInfo {
         }
 
         return Info(
-            title: "app-version".localized(),
+            title: "App Version:",
             detail: "\(version)"
         )
     }
@@ -46,7 +52,7 @@ enum UserInfo {
         }
 
         return Info(
-            title: "build-version".localized(),
+            title: "Build Version:",
             detail: "Build: \(build)"
         )
     }
@@ -57,7 +63,7 @@ enum UserInfo {
         }
 
         return Info(
-            title: "bundle-name".localized(),
+            title: "Bundle Name:",
             detail: "\(bundleName)"
         )
     }
@@ -68,11 +74,12 @@ enum UserInfo {
         }
 
         return Info(
-            title: "bundle-id".localized(),
+            title: "Bundle ID:",
             detail: "\(bundleID)"
         )
     }
 
+    @MainActor
     static func getScreenResolution() -> Info {
         let screen = UIScreen.main
         let bounds = screen.bounds
@@ -82,39 +89,46 @@ enum UserInfo {
         let screenHeight = bounds.size.height * scale
 
         return .init(
-            title: "screen-resolution".localized(),
+            title: "Screen Resolution:",
             detail: "\(screenWidth) x \(screenHeight) points"
         )
     }
 
+    @MainActor
     static func getDeviceModelInfo() -> Info {
         let deviceModel = UIDevice.current.modelName
         return Info(
-            title: "device-model".localized(),
+            title: "Device Model:",
             detail: deviceModel
         )
     }
 
+    @MainActor
     static func getIOSVersionInfo() -> Info {
         let iOSVersion = UIDevice.current.systemVersion
         return Info(
-            title: "ios-version".localized(),
+            title: "iOS Version:",
             detail: iOSVersion
         )
     }
 
+    @MainActor
+    static func getAPNSTokenInfo() -> Info {
+        return APNSTokenManager.shared.getTokenInfo()
+    }
+
     static func getMeasureAppStartUpTime() -> Info? {
-        guard let launchStartTime = LaunchTimeTracker.launchStartTime else { return nil }
+        guard let launchStartTime = LaunchTimeTracker.shared.launchStartTime else { return nil }
 
         return Info(
-            title: "inicialization-time".localized(),
+            title: "Initialization Time:",
             detail: String(format: "%.4lf%", launchStartTime) + " (s)"
         )
     }
 
     static func getReachability() -> Info {
-        return Info(
-            title: "reachability-status".localized(),
+        Info(
+            title: "Connection Type:",
             detail: ReachabilityManager.connection.description
         )
     }

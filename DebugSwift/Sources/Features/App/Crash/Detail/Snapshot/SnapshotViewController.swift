@@ -8,8 +8,14 @@
 import UIKit
 
 final class SnapshotViewController: BaseController {
-
     // MARK: - Properties
+
+    private let descriptionLabel: UILabel = {
+        let label = UILabel()
+        label.numberOfLines = .zero
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
 
     private let imageView: UIImageView = {
         let imageView = UIImageView()
@@ -20,9 +26,12 @@ final class SnapshotViewController: BaseController {
 
     // MARK: - Initialization
 
-    init(image: UIImage) {
+    init(title: String? = nil, image: UIImage, description: String = "") {
         imageView.image = image
+        descriptionLabel.text = description
         super.init()
+
+        self.title = title ?? "Snapshot"
     }
 
     // MARK: - View Lifecycle
@@ -35,10 +44,25 @@ final class SnapshotViewController: BaseController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        title = "snapshot".localized()
-        view.backgroundColor = Theme.shared.backgroundColor
+        view.backgroundColor = UIColor.black
 
+        view.addSubview(descriptionLabel)
         view.addSubview(imageView)
+
+        NSLayoutConstraint.activate([
+            descriptionLabel.leadingAnchor.constraint(
+                equalTo: view.leadingAnchor,
+                constant: 20
+            ),
+            descriptionLabel.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor,
+                constant: -20
+            ),
+            descriptionLabel.topAnchor.constraint(
+                equalTo: view.topAnchor,
+                constant: 200
+            )
+        ])
 
         NSLayoutConstraint.activate([
             imageView.leadingAnchor.constraint(
@@ -50,8 +74,8 @@ final class SnapshotViewController: BaseController {
                 constant: -20
             ),
             imageView.topAnchor.constraint(
-                equalTo: view.topAnchor,
-                constant: 200
+                equalTo: descriptionLabel.bottomAnchor,
+                constant: 20
             ),
             imageView.bottomAnchor.constraint(
                 equalTo: view.bottomAnchor,

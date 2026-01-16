@@ -14,7 +14,9 @@ extension UIColor {
         hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
 
         var rgb: UInt64 = 0
-        Scanner(string: hexSanitized).scanHexInt64(&rgb)
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else {
+            return nil // Retorna nil se a string não for um hexadecimal válido
+        }
 
         let red = CGFloat((rgb & 0xff0000) >> 16) / 255.0
         let green = CGFloat((rgb & 0x00ff00) >> 8) / 255.0
@@ -42,14 +44,14 @@ extension UIColor {
         self.init(red: red, green: green, blue: blue, alpha: alpha)
     }
 
-    static func intFromHexString(hex hexStr: String) -> UInt32 {
-        var hexInt: UInt32 = 0
+    static func intFromHexString(hex hexStr: String) -> UInt64 {
+        var hexInt: UInt64 = 0
         // Create scanner
         let scanner = Scanner(string: hexStr)
         // Tell scanner to skip the # character
         scanner.charactersToBeSkipped = CharacterSet(charactersIn: "#")
         // Scan hex value
-        scanner.scanHexInt32(&hexInt)
+        scanner.scanHexInt64(&hexInt)
         return hexInt
     }
 
@@ -62,13 +64,22 @@ extension UIColor {
         let green = Float(components[1])
         let blue = Float(components[2])
 
-        let hexString = String(
+        return String(
             format: "#%02lX%02lX%02lX",
             lroundf(red * 255),
             lroundf(green * 255),
             lroundf(blue * 255)
         )
+    }
+}
 
-        return hexString
+extension UIColor {
+    convenience init(light: UIColor, dark: UIColor) {
+        self.init {
+            switch $0.userInterfaceStyle {
+            case .dark: dark
+            default: light
+            }
+        }
     }
 }

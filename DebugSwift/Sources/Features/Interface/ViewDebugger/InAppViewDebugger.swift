@@ -9,11 +9,12 @@
 import UIKit
 
 /// Exposes APIs for presenting the view debugger.
+@MainActor
 final class InAppViewDebugger: NSObject {
     /// Takes a snapshot of the application's key window and presents the debugger
     /// view controller from the root view controller.
-    class func present() {
-        presentForWindow(UIApplication.shared.keyWindow)
+    final class func present() {
+        presentForWindow(UIApplication.keyWindow)
     }
 
     /// Takes a snapshot of the specified window and presents the debugger view controller
@@ -24,12 +25,12 @@ final class InAppViewDebugger: NSObject {
     ///   - configuration: Optional configuration for the view debugger.
     ///   - completion: Completion block to be called once the view debugger has
     ///   been presented.
-    class func presentForWindow(
+    final class func presentForWindow(
         _ window: UIWindow?,
         configuration: Configuration? = nil,
         completion: (() -> Void)? = nil
     ) {
-        guard let window = window else {
+        guard let window else {
             return
         }
 
@@ -50,12 +51,12 @@ final class InAppViewDebugger: NSObject {
     ///   - configuration: Optional configuration for the view debugger.
     ///   - completion: Completion block to be called once the view debugger has
     ///   been presented.
-    class func presentForView(
+    final class func presentForView(
         _ view: UIView?,
         configuration: Configuration? = nil,
         completion: (() -> Void)? = nil
     ) {
-        guard let view = view else {
+        guard let view else {
             return
         }
         let snapshot = Snapshot(element: ViewElement(view: view))
@@ -70,7 +71,7 @@ final class InAppViewDebugger: NSObject {
     ///   - configuration: Optional configuration for the view debugger.
     ///   - completion: Completion block to be called once the view debugger has
     ///   been presented.
-    class func presentForViewController(_ viewController: UIViewController?, configuration: Configuration? = nil, completion: (() -> Void)? = nil) {
+    final class func presentForViewController(_ viewController: UIViewController?, configuration: Configuration? = nil, completion: (() -> Void)? = nil) {
         guard let view = viewController?.view else {
             return
         }
@@ -88,15 +89,12 @@ final class InAppViewDebugger: NSObject {
     ///   - configuration: Optional configuration for the view debugger.
     ///   - completion: Completion block to be called once the view debugger has
     ///   been presented.
-    class func presentWithSnapshot(
+    final class func presentWithSnapshot(
         _ snapshot: Snapshot,
-        rootViewController: UIViewController?,
+        rootViewController _: UIViewController?,
         configuration: Configuration? = nil,
         completion: (() -> Void)? = nil
     ) {
-        guard let rootViewController = rootViewController else {
-            return
-        }
         let debuggerViewController = ViewDebuggerViewController(
             snapshot: snapshot,
             configuration: configuration ?? Configuration()

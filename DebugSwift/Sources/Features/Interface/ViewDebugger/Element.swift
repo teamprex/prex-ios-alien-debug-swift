@@ -6,8 +6,8 @@
 //  Copyright © 2019 Indragie Karunaratne. All rights reserved.
 //
 
-import Foundation
 import CoreGraphics
+import Foundation
 
 /// Provides identifying information for an element that is displayed in the
 /// view debugger.
@@ -42,6 +42,7 @@ final class ElementLabel: NSObject {
 }
 
 /// A UI element that can be snapshotted.
+@MainActor
 protocol Element {
     /// Identifying information for the element, like its name and classification.
     var label: ElementLabel { get }

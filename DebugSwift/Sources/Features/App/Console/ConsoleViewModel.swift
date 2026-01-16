@@ -8,48 +8,50 @@
 import Foundation
 
 final class AppConsoleViewModel: NSObject, ResourcesGenericListViewModel {
-
-    private var data: [String] {
-        LogIntercepter.shared.consoleOutput
-    }
+    private var data: [String] { ConsoleOutput.shared.getPrintAndNSLogOutput() }
 
     private var filteredInfo = [String]()
 
     // MARK: - ViewModel
 
-    var isSearchActived: Bool = false
+    var isSearchActived = false
 
     var reloadData: (() -> Void)?
 
     func viewTitle() -> String {
-        "actions-console".localized()
+        "Console"
     }
 
     func numberOfItems() -> Int {
         isSearchActived ? filteredInfo.count : data.count
     }
 
-    func dataSourceForItem(atIndex index: Int) -> (title: String, value: String) {
+    func dataSourceForItem(atIndex index: Int) -> ViewData {
         let info = isSearchActived ? filteredInfo[index] : data[index]
-        return (title: info, value: "")
+        return .init(title: info)
     }
 
     func handleClearAction() {
-        LogIntercepter.shared.reset()
+        ConsoleOutput.shared.removeAll()
         filteredInfo.removeAll()
     }
 
     func handleDeleteItemAction(atIndex index: Int) {
         if isSearchActived {
             let info = filteredInfo.remove(at: index)
-            LogIntercepter.shared.consoleOutput.removeAll(where: { $0 == info })
+            ConsoleOutput.shared.removeAllPrintAndNSLogOutput(info)
         } else {
-            LogIntercepter.shared.consoleOutput.remove(at: index)
+            ConsoleOutput.shared.removePrintAndNSLogOutput(at: index)
         }
     }
 
     func emptyListDescriptionString() -> String {
-        "empty-data".localized() + "actions-console".localized()
+        "No data found in the " + "Console"
+    }
+
+    func handleShareAction() {
+        let allData = data.joined(separator: "\n")
+        FileSharingManager.generateFileAndShare(text: allData, fileName: "console")
     }
 
     // MARK: - Search Functionality
@@ -62,11 +64,5 @@ final class AppConsoleViewModel: NSObject, ResourcesGenericListViewModel {
                 $0.localizedCaseInsensitiveContains(searchText)
             }
         }
-    }
-}
-
-extension AppConsoleViewModel: LogInterceptorDelegate {
-    func logUpdated() {
-        reloadData?()
     }
 }

@@ -1,0 +1,13 @@
+desc "Run the tests and prepare for Danger"
+lane :test do
+  # Run tests
+  scan(
+    project:                          "Example.xcodeproj",
+    scheme:                           "Example",
+    derived_data_path:                "fastlane/test_output",
+    clean:                            true,
+    result_bundle:                    true,
+    code_coverage:                    true,
+    devices:                          ['iPhone 16']
+  )
+end
