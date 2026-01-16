@@ -44,41 +44,16 @@ public class DebugSwift {
     @MainActor
     public func toggle() -> Self {
         FloatViewManager.toggle()
-<<<<<<< HEAD
-    }
-    
-    public static func theme(appearance: Appearance) {
-        Theme.shared.setAppearance(appearance: appearance)
-    }
-    
-    public static func toggleDebugger(_ enable: Bool) {
-        DebugSwift.Debugger.enable = enable
-    }
-}
-
-extension DebugSwift {
-    public enum Network {
-        public static var ignoredURLs = [String]()
-        public static var onlyURLs = [String]()
-    }
-
-    public enum App {
-        public static var customInfo: (() -> [CustomData])?
-        public static var customAction: (() -> [CustomAction])?
-        public static var customControllers: (() -> [UIViewController])?
-    }
-
-    public enum Console {
-        public static var ignoredLogs = [String]()
-        public static var onlyLogs = [String]()
-    }
-
-    enum Debugger {
-        @UserDefaultAccess(key: .debugger, defaultValue: true)
-        public static var enable: Bool
-=======
-
         return self
->>>>>>> upstream/main
+    }
+    
+    /// Enable or disable debug logging in Xcode console
+    /// - Parameter enable: `true` to enable debug logs, `false` to disable
+    /// - Returns: `Self` for method chaining
+    @discardableResult
+    @MainActor
+    public func toggleDebugger(_ enable: Bool) -> Self {
+        Debug.enable = enable
+        return self
     }
 }
