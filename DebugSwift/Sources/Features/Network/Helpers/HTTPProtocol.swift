@@ -69,22 +69,6 @@ public final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
 
     private var threadOperator: ThreadOperator?
 
-    private struct NetworkReportData: @unchecked Sendable {
-        let url: URL?
-        let method: String?
-        let requestBody: Data?
-        let requestBodyStream: Data?
-        let requestHeaderFields: [String: String]?
-        let cachePolicy: UInt
-        let requestId: String
-        let responseMimeType: String?
-        let responseStatusCode: Int?
-        let responseHeaderFields: [AnyHashable: Any]?
-        let data: Data
-        let startTime: Date
-        let error: (any Error)?
-    }
-
     private func use(_ cache: CachedURLResponse) {
         DebugSwift.Network.shared.delegate?.urlSession(
             self,
@@ -179,79 +163,84 @@ public final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
             dataTask = nil
         }
 
+        // Invalidate session to break retain cycle
         session?.invalidateAndCancel()
         session = nil
 
-        let reportData = NetworkReportData(
-            url: request.url,
-            method: request.httpMethod,
-            requestBody: request.httpBody,
-            requestBodyStream: request.httpBodyStream?.toData(),
-            requestHeaderFields: request.allHTTPHeaderFields,
-            cachePolicy: request.cachePolicy.rawValue,
-            requestId: request.requestId,
-            responseMimeType: response?.mimeType,
-            responseStatusCode: response?.statusCode,
-            responseHeaderFields: response?.allHeaderFields,
-            data: data,
-            startTime: startTime,
-            error: error)
+        let url = request.url
+        let method = request.httpMethod
+        let requestData = request.httpBody ?? request.httpBodyStream?.toData()
+        let responseData = data
+        let statusCode = response.map { "\($0.statusCode)" }
+        let mineType = response?.mimeType
+        let capturedStartTime = startTime
+        let capturedError = error
+        let requestHeaderFields = request.allHTTPHeaderFields
+        let responseHeaderFields = headersToString(response?.allHeaderFields)
+        let requestId = request.requestId
+        let cachePolicy = getCachePolicy(value: request.cachePolicy.rawValue)
 
         Task { @MainActor in
             guard NetworkHelper.shared.isNetworkEnable
             else { return }
+
+            let reportData = NetworkReportData(
+                url: url,
+                method: method,
+                requestData: requestData,
+                responseData: responseData,
+                statusCode: statusCode,
+                mineType: mineType,
+                startTime: capturedStartTime,
+                endTime: Date(),
+                error: capturedError,
+                requestHeaderFields: requestHeaderFields,
+                responseHeaderFields: responseHeaderFields,
+                requestId: requestId,
+                cachePolicy: cachePolicy)
             Self.report(reportData)
         }
     }
-    
+
     @MainActor
-    private static func report(_ reportData: NetworkReportData) {
+    private static func report(_ data: NetworkReportData) {
         var model = HttpModel()
-        model.url = reportData.url
-        model.method = reportData.method
-        model.mineType = reportData.responseMimeType
+        model.url = data.url
+        model.method = data.method
+        model.mineType = data.mineType
 
-        if let requestBody = reportData.requestBody {
-            model.requestData = requestBody
+        model.requestData = data.requestData
+
+        if let statusCode = data.statusCode {
+            model.statusCode = statusCode
         }
 
-        if let requestBodyStream = reportData.requestBodyStream {
-            model.requestData = requestBodyStream
-        }
+        model.responseData = data.responseData
+        model.size = data.responseData?.formattedSize()
+        model.isImage = (data.mineType?.contains("image")) ?? false
 
-        if let statusCode = reportData.responseStatusCode {
-            model.statusCode = "\(statusCode)"
-        }
-
-        model.responseData = reportData.data
-        model.size = reportData.data.formattedSize()
-        model.isImage = (reportData.responseMimeType?.contains("image")) ?? false
-
-        let startTimeDouble = reportData.startTime.timeIntervalSince1970
-        let endTimeDouble = Date().timeIntervalSince1970
+        // Time
+        let startTimeDouble = data.startTime.timeIntervalSince1970
+        let endTimeDouble = data.endTime.timeIntervalSince1970
         let durationDouble = abs(endTimeDouble - startTimeDouble)
         let formattedDuration = String(format: "%.4f", durationDouble)
 
-        model.startTime = "\(reportData.startTime.formatted())"
-        model.endTime = "\(Date().formatted())"
+        model.startTime = "\(data.startTime.formatted())"
+        model.endTime = "\(data.endTime.formatted())"
         model.totalDuration = "\(formattedDuration) (s)"
 
-        model.errorDescription = reportData.error?.localizedDescription ?? ""
-        model.errorLocalizedDescription = reportData.error?.localizedDescription ?? ""
-        model.requestHeaderFields = reportData.requestHeaderFields
+        model.errorDescription = data.error?.localizedDescription ?? ""
+        model.errorLocalizedDescription = data.error?.localizedDescription ?? ""
+        model.requestHeaderFields = data.requestHeaderFields
 
-        if let responseHeaderFields = reportData.responseHeaderFields {
-            model.responseHeaderFields = responseHeaderFields.convertKeysToString()
-            model.responseHeaderFields?.updateValue(
-                getCachePolicyString(value: reportData.cachePolicy),
-                forKey: "Cache-Policy")
-        }
+        model.responseHeaderFields = data.responseHeaderFields
+        model.responseHeaderFields?.updateValue(data.cachePolicy, forKey: "Cache-Policy")
 
         if let responseDate = model.endTime {
             model.responseHeaderFields?.updateValue(responseDate, forKey: "Response-Date")
         }
 
-        if reportData.responseMimeType == nil {
+        if data.mineType == nil {
             model.isImage = false
         }
 
@@ -269,13 +258,22 @@ public final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
             }
         }
 
-        model.requestId = reportData.requestId
-        model = ErrorHelper.handle(reportData.error, model: model)
+        model.requestId = data.requestId
+        model = ErrorHelper.handle(data.error, model: model)
         if HttpDatasource.shared.addHttpRequest(model) {
             NotificationCenter.default.post(
                 name: NSNotification.Name("reloadHttp_DebugSwift"),
                 object: model.isSuccess)
         }
+    }
+
+    private func headersToString(_ headers: [AnyHashable: Any]?) -> [String: String]? {
+        guard let headers else { return nil }
+        var result = [String: String]()
+        for (key, value) in headers {
+            result["\(key)"] = "\(value)"
+        }
+        return result
     }
 }
 
@@ -358,7 +356,7 @@ extension CustomHTTPProtocol: URLSessionDataDelegate {
         return true
     }
 
-    private static func getCachePolicyString(value: UInt?) -> String {
+    private func getCachePolicy(value: UInt?) -> String {
         switch value {
         case 0:
             return "useProtocolCachePolicy"
@@ -427,5 +425,53 @@ extension CustomHTTPProtocol: URLSessionTaskDelegate {
                 totalBytesExpectedToSend: totalBytesExpectedToSend
             )
         }
+    }
+}
+
+// MARK: - Network Reporting Data
+
+struct NetworkReportData: Sendable {
+    let url: URL?
+    let method: String?
+    let requestData: Data?
+    let responseData: Data?
+    let statusCode: String?
+    let mineType: String?
+    let startTime: Date
+    let endTime: Date
+    let error: Error?
+    let requestHeaderFields: [String: String]?
+    let responseHeaderFields: [String: String]?
+    let requestId: String
+    let cachePolicy: String
+
+    init(
+        url: URL?,
+        method: String?,
+        requestData: Data?,
+        responseData: Data?,
+        statusCode: String?,
+        mineType: String?,
+        startTime: Date,
+        endTime: Date,
+        error: Error?,
+        requestHeaderFields: [String: String]?,
+        responseHeaderFields: [String: String]?,
+        requestId: String,
+        cachePolicy: String
+    ) {
+        self.url = url
+        self.method = method
+        self.requestData = requestData
+        self.responseData = responseData
+        self.statusCode = statusCode
+        self.mineType = mineType
+        self.startTime = startTime
+        self.endTime = endTime
+        self.error = error
+        self.requestHeaderFields = requestHeaderFields
+        self.responseHeaderFields = responseHeaderFields
+        self.requestId = requestId
+        self.cachePolicy = cachePolicy
     }
 }
