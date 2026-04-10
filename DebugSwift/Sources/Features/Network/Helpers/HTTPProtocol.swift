@@ -69,6 +69,22 @@ public final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
 
     private var threadOperator: ThreadOperator?
 
+    private struct NetworkReportData: @unchecked Sendable {
+        let url: URL?
+        let method: String?
+        let requestBody: Data?
+        let requestBodyStream: Data?
+        let requestHeaderFields: [String: String]?
+        let cachePolicy: UInt
+        let requestId: String
+        let responseMimeType: String?
+        let responseStatusCode: Int?
+        let responseHeaderFields: [AnyHashable: Any]?
+        let data: Data
+        let startTime: Date
+        let error: (any Error)?
+    }
+
     private func use(_ cache: CachedURLResponse) {
         DebugSwift.Network.shared.delegate?.urlSession(
             self,
@@ -163,62 +179,79 @@ public final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
             dataTask = nil
         }
 
-        Task { @Sendable in
-            guard await NetworkHelper.shared.isNetworkEnable else {
-                return
-            }
-            
-            await processNetworkData()
+        session?.invalidateAndCancel()
+        session = nil
+
+        let reportData = NetworkReportData(
+            url: request.url,
+            method: request.httpMethod,
+            requestBody: request.httpBody,
+            requestBodyStream: request.httpBodyStream?.toData(),
+            requestHeaderFields: request.allHTTPHeaderFields,
+            cachePolicy: request.cachePolicy.rawValue,
+            requestId: request.requestId,
+            responseMimeType: response?.mimeType,
+            responseStatusCode: response?.statusCode,
+            responseHeaderFields: response?.allHeaderFields,
+            data: data,
+            startTime: startTime,
+            error: error)
+
+        Task { @MainActor in
+            guard NetworkHelper.shared.isNetworkEnable
+            else { return }
+            Self.report(reportData)
         }
     }
     
     @MainActor
-    private func processNetworkData() async {
+    private static func report(_ reportData: NetworkReportData) {
         var model = HttpModel()
-        model.url = request.url
-        model.method = request.httpMethod
-        model.mineType = response?.mimeType
+        model.url = reportData.url
+        model.method = reportData.method
+        model.mineType = reportData.responseMimeType
 
-        if let requestBody = request.httpBody {
+        if let requestBody = reportData.requestBody {
             model.requestData = requestBody
         }
 
-        if let requestBodyStream = request.httpBodyStream {
-            model.requestData = requestBodyStream.toData()
+        if let requestBodyStream = reportData.requestBodyStream {
+            model.requestData = requestBodyStream
         }
 
-        if let httpResponse = response {
-            model.statusCode = "\(httpResponse.statusCode)"
+        if let statusCode = reportData.responseStatusCode {
+            model.statusCode = "\(statusCode)"
         }
 
-        model.responseData = data
-        model.size = data.formattedSize()
-        model.isImage = (response?.mimeType?.contains("image")) ?? false
+        model.responseData = reportData.data
+        model.size = reportData.data.formattedSize()
+        model.isImage = (reportData.responseMimeType?.contains("image")) ?? false
 
-        // Time
-        let startTimeDouble = startTime.timeIntervalSince1970
+        let startTimeDouble = reportData.startTime.timeIntervalSince1970
         let endTimeDouble = Date().timeIntervalSince1970
         let durationDouble = abs(endTimeDouble - startTimeDouble)
         let formattedDuration = String(format: "%.4f", durationDouble)
 
-        model.startTime = "\(startTime.formatted())"
+        model.startTime = "\(reportData.startTime.formatted())"
         model.endTime = "\(Date().formatted())"
         model.totalDuration = "\(formattedDuration) (s)"
 
-        model.errorDescription = error?.localizedDescription ?? ""
-        model.errorLocalizedDescription = error?.localizedDescription ?? ""
-        model.requestHeaderFields = request.allHTTPHeaderFields
+        model.errorDescription = reportData.error?.localizedDescription ?? ""
+        model.errorLocalizedDescription = reportData.error?.localizedDescription ?? ""
+        model.requestHeaderFields = reportData.requestHeaderFields
 
-        if let response {
-            model.responseHeaderFields = response.allHeaderFields.convertKeysToString()
-            model.responseHeaderFields?.updateValue(getCachePolicy(value: request.cachePolicy.rawValue), forKey: "Cache-Policy")
+        if let responseHeaderFields = reportData.responseHeaderFields {
+            model.responseHeaderFields = responseHeaderFields.convertKeysToString()
+            model.responseHeaderFields?.updateValue(
+                getCachePolicyString(value: reportData.cachePolicy),
+                forKey: "Cache-Policy")
         }
 
         if let responseDate = model.endTime {
             model.responseHeaderFields?.updateValue(responseDate, forKey: "Response-Date")
         }
 
-        if response?.mimeType == nil {
+        if reportData.responseMimeType == nil {
             model.isImage = false
         }
 
@@ -236,13 +269,12 @@ public final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
             }
         }
 
-        model.requestId = request.requestId
-        model = ErrorHelper.handle(error, model: model)
+        model.requestId = reportData.requestId
+        model = ErrorHelper.handle(reportData.error, model: model)
         if HttpDatasource.shared.addHttpRequest(model) {
             NotificationCenter.default.post(
                 name: NSNotification.Name("reloadHttp_DebugSwift"),
-                object: model.isSuccess
-            )
+                object: model.isSuccess)
         }
     }
 }
@@ -326,7 +358,7 @@ extension CustomHTTPProtocol: URLSessionDataDelegate {
         return true
     }
 
-    private func getCachePolicy(value: UInt?) -> String {
+    private static func getCachePolicyString(value: UInt?) -> String {
         switch value {
         case 0:
             return "useProtocolCachePolicy"
